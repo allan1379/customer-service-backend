@@ -23,6 +23,13 @@ class TaskContext:
     step_id: str  # 业务流程的步骤ID
     slot: dict[str, Any] = field(default_factory=dict)  # 业务流程的填槽数据
 
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'TaskContext':
+        return cls(**data)
+
 
 @dataclass(slots=True)
 class SystemContext:
