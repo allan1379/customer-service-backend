@@ -8,6 +8,8 @@
 3.会话相关：Session:会话  开启一次会话创建一个Session对象（会话的额外信息：会话时间、关闭时间... 核心信息：用户对话内容（Q->A）Turn:属性：turns:List[Turn] Turn:user_message bot_message列表）
 
 """
+import time
+import uuid
 from dataclasses import field
 from typing import Any
 
@@ -118,3 +120,163 @@ class DialogueState:
             sessions=[Session.from_dict(session_dict) for session_dict in data.get("sessions", [])],
             pending_turn=Turn.from_dict(data['pending_turn']) if data.get('pending_turn') else None
         )
+
+    # ==========================流程相关==========================
+    def start_active_system_task(self, system_context: SystemContext):
+        """
+        开启并激活系统流程(任务)
+        :return:
+        """
+        self.active_system_task = system_context
+
+    def end_activating_system_task(self):
+        """
+        结束正在激活的系统流程(任务)
+        :return:
+        """
+        self.active_system_task = None
+
+    def start_active_business_task(self, task_context: TaskContext):
+        """
+        开启并激活业务流程(任务)
+        :param task_context:
+        :return:
+        """
+        self.active_task = task_context
+
+    def end_active_business_task(self):
+        """
+        结束正在激活的业务流程(任务))
+        :return:
+        """
+        self.active_task = None
+
+    def end_activating_task(self):
+        """
+        结束正在运行的流程（清空业务流程和系统流程）
+        :return:
+        """
+        self.active_system_task = None
+        self.active_task = None
+
+    def interrupted_activating_task(self):
+        """"
+        中断正在运行的业务流程
+        """
+        # 1. 将正在运行的业务流程存储到栈中
+        self.interrupt_tasks.append(self.active_task)
+        self.active_task = None
+
+    def resumed_interrupted_business_task(self, flow_id: str | None = None) -> bool:
+        """"
+        恢复中断的业务流程
+        """
+        # 1. 检验栈中是否有元素
+        if not self.interrupt_tasks:
+            return False
+        # 2.判断 flow_id是否有值
+        if flow_id:
+            for i, interrupt_task in enumerate(self.interrupt_tasks):
+                if interrupt_task.flow_id == flow_id:
+                    self.active_task = interrupt_task
+                    del self.interrupt_tasks[i]
+                    return True
+        else:
+            interrupt_task = self.interrupt_tasks.pop()
+            self.active_task = interrupt_task
+            return True
+
+        return False
+
+    def current_activating_task(self):
+        """"
+        当前正在运行的流程(业务流程、系统流程？)
+        业务流程有 系统流程没有：获取业务流程
+        系统流程有 业务流程没有：获取系统流程
+        系统流程有 业务流程也有： 优先获取系统流程：
+        """
+        return self.active_system_task or self.active_task
+
+    # ==========================槽位相关==========================
+    def set_sorts(self, sorts: dict[str, Any]):
+        """"
+        设置槽位
+        """
+        if self.active_task:
+            self.active_task.slots.update(sorts)
+
+    def get_sorts(self, sort_name: str) -> Any:
+        """"
+        根据槽位名读取槽位的值
+        """
+        if self.active_task:
+            return self.active_task.slots.get(sort_name)
+        else:
+            return None
+
+    # ==========================卡片相关==========================
+    def set_focused_object(self, focused_object: FocusedObject):
+        """"
+        添加聚焦卡片
+        """
+        self.focused_object = focused_object
+
+    # ==========================session(会话)相关=================
+    def current_session(self) -> Session | None:
+        """"
+        返回当前会话
+        """
+        for session in self.sessions:
+            if session.session_id == self.current_session_id:
+                return session
+
+        return None
+
+    def start_session(self):
+        """"
+        创建一个新会话
+        """
+        import time
+        now = time.time()
+        session = Session(session_id=str(uuid.uuid4()), started_at=now, last_activity_at=now)
+        self.current_session_id = session.session_id
+        self.sessions.append(session)
+
+    def close_session(self):
+        """"
+        关闭session对象
+        """
+        if self.current_session():
+            # 1. 修改session的关闭时间
+            self.current_session().closed_at = time.time()
+            self.current_session_id = None
+
+    def reset_running_state_for_new_session(self):
+        """"
+        session超时(session超时时间是60min)
+        """
+        # 1.清除任务相关
+        self.active_task = None
+        self.interrupt_tasks = list()
+        self.active_system_task = None
+        # 2.清除卡片
+        self.focused_object = None
+        # 3.清空缓存区
+        self.pending_turn = None
+
+    # ==========================Turn(轮次)相关====================
+    def start_turn(self, user_message: UserMessage):
+        """"
+        开启一个轮次
+        """
+        if self.current_session():
+            turn = Turn(turn_id=str(uuid.uuid4()), user_message=user_message, bot_messages=list())
+            self.pending_turn = turn
+
+    def commit_pending_turn(self):
+        """"
+        提交turn缓冲区
+        """
+        if self.current_session():
+            self.current_session().turns.append(self.pending_turn)
+            self.pending_turn = None

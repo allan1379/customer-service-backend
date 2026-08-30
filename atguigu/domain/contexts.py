@@ -21,7 +21,7 @@ class TaskContext:
     """
     flow_id: str  # 业务流程的流程ID
     step_id: str  # 业务流程的步骤ID
-    slot: dict[str, Any] = field(default_factory=dict)  # 业务流程的填槽数据
+    slots: dict[str, Any] = field(default_factory=dict)  # 业务流程的填槽数据
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
