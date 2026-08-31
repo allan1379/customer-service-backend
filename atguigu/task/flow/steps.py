@@ -14,7 +14,7 @@ class ResponseDefinition:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ResponseDefinition":
-        return cls(text=data["text"], mode=data["mode"], prompt=data.get("prompt"))
+        return cls(text=data["text"], mode=data.get("mode"), prompt=data.get("prompt"))
 
 
 @dataclass(slots=True)
