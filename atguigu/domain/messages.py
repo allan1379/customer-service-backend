@@ -93,3 +93,9 @@ class BotMessage:
             text=data['text'],
             object=FocusedObject(data['object']) if data['object'] else None
         )
+
+@dataclass(slots=True)
+class ProcessResult:
+    sender_id: str
+    message_id: str
+    messages: list[BotMessage]
