@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from atguigu.engine.builder import build_dialogue_engine
 from atguigu.engine.dialogue_engine import DialogueEngine
 from atguigu.infrastructure import db
 from atguigu.repository.dialogue_repository import DialogueRepository
@@ -16,9 +17,14 @@ async def get_session():
 
 RepositorySessionDep = Annotated[AsyncSession, Depends(get_session)]
 
+dialogue_engine: DialogueEngine | None = None
+
+def init_dialogue_engine():
+    global dialogue_engine
+    dialogue_engine = build_dialogue_engine()
 
 def get_engine():
-    return DialogueEngine()
+    return dialogue_engine
 
 
 DialogueEngineDep = Annotated[DialogueEngine, Depends(get_engine)]

@@ -15,8 +15,9 @@ class DialogueService:
         """
         # 1读取数据
         dialogue_state: DialogueState = await  self.dialogue_repository.load_dialogue(user_message.sender_id)
-        # 2. 引擎层使用(修改DialogueState的状态) 今天不做（TODO）
-        process_result: ProcessResult = self.dialogue_engine.hand_message(dialogue_state)
+
+        # 2. 引擎层使用(修改DialogueState的状态)
+        process_result: ProcessResult = await self.dialogue_engine.hand_message(user_message,dialogue_state)
 
         # 3.保存信息
         await self.dialogue_repository.save_dialogue(dialogue_state)
