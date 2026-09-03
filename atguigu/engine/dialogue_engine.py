@@ -1,17 +1,28 @@
 import time
 
+from atguigu.chitchat.handler import ChitChatHandler
 from atguigu.domain.messages import ProcessResult, BotMessage, UserMessage, MessageType
 from atguigu.domain.state import DialogueState
 import uuid
 
+from atguigu.knowledge.handler import KnowledgeHandler
 from atguigu.plan.planner import TurnPlanner
 from atguigu.plan.turn_plan import TurnPlan
+from atguigu.task.flow.flows import FlowsList
+from atguigu.task.handler import TaskHandler
 
 
 class DialogueEngine:
 
-    def __init__(self, planner: TurnPlanner):
+    def __init__(self, planner: TurnPlanner,
+                 task_handler: TaskHandler,
+                 knowledge_handler: KnowledgeHandler,
+                 chitchat_handler: ChitChatHandler
+                 ):
         self.planner = planner
+        self.task_handler = task_handler
+        self.knowledge_handler = knowledge_handler
+        self.chitchat_handler = chitchat_handler
 
     async def hand_message(self, user_message: UserMessage, state: DialogueState) -> ProcessResult:
         """"
@@ -23,7 +34,7 @@ class DialogueEngine:
         self._begin_turn(user_message, state)
         # 3. 判断消息类型
         if user_message.type is MessageType.TEXT:  # 处理文本消息
-            await self._hand_text_msg(user_message, state)
+            await self._hand_text_msg(user_message, state,self.task_handler.flow_list)
         else:  # 处理 卡片消息
             self._hand_obj_msg(user_message, state)
 
@@ -39,6 +50,7 @@ class DialogueEngine:
         if current_session is None:
             # 创建一个session
             state.start_session()
+            return
         # session存在需要判断是否过期
         now = time.time()
         # 会话过期时间设定60分钟
@@ -49,6 +61,7 @@ class DialogueEngine:
             # 清空已经过期session的其他状态
             state.reset_running_state_for_new_session()
             state.start_session()
+            return
         else:
             # 修改最后一次激活时间
             current_session.last_activity_at = now
@@ -60,7 +73,7 @@ class DialogueEngine:
         """
         state.start_turn(user_message)
 
-    async def _hand_text_msg(self, user_message: UserMessage, state: DialogueState) -> list[BotMessage]:
+    async def _hand_text_msg(self, user_message: UserMessage, state: DialogueState, flow_list: FlowsList) -> list[BotMessage]:
 
         """
         1. 调用大语言模型，目的：TurnPlanner根据任务路由对应的轨道(轨道一:业务任务轨道 轨道二:知识查询任务轨道 轨道三:闲聊任务轨道)
@@ -76,7 +89,7 @@ class DialogueEngine:
         """
 
         # 调用进行意图识别
-        turn_plan: TurnPlan = await self.planner.predict(user_message, state)
+        turn_plan: TurnPlan = await self.planner.predict(user_message, state,flow_list)
         pass
 
     def _hand_obj_msg(self, user_message, state):
