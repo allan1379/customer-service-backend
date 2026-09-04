@@ -1,4 +1,5 @@
 from dataclasses import field
+from enum import Enum
 from typing import Any
 
 from attr import dataclass
@@ -29,7 +30,7 @@ class ChitChatTurnPlan:
     pass
 
 
-@dataclass()
+@dataclass
 class TurnPlan:
     task: TaskTurnPlan | None = None
     knowledge: KnowledgeTurnPlan | None = None
@@ -42,3 +43,40 @@ class TurnPlan:
             knowledge=KnowledgeTurnPlan.from_dict(data['knowledge']) if data.get('knowledge') else None,
             chitchat=ChitChatTurnPlan() if data.get('chitchat') else None
         )
+
+    def activated_tracks(self) -> list[str]:
+        """"
+        用于判断是否有多个task
+        """
+        tracks = []
+
+        if self.task is not None:
+            tracks.append("task")
+        if self.knowledge is not None:
+            tracks.append("knowledge")
+        if self.chitchat is not None:
+            tracks.append("chichat")
+
+        return tracks
+
+
+# 失败校验的枚举类型
+class ClarifyReason(Enum):
+    MISSING_TRACK = "missing_track"
+    MULTIPLE_TRACKS = "multiple_tracks"
+    MISSING_TASK_COMMANDS = "missing_task_commands"
+    MISSING_KNOWLEDGE_INTENT = "missing_knowledge_intent"
+    INVALID_TASK_COMMANDS = "invalid_task_commands"
+    MULTIPLE_TASK_FLOWS = "multiple_task_flows"
+    UNKNOWN_TASK_FLOW = "unknown_task_flow"
+    MISSING_FOCUSED_OBJECT = "missing_focused_object"
+    OBJECT_REQUIRES_INTENT = "object_requires_intent"
+
+
+@dataclass
+class TurnPlanValidateResult:
+    """
+    校验器的校验结果
+    """
+    valid: bool  # 校验通过或者失败
+    reason: ClarifyReason | None = None

@@ -9,6 +9,7 @@ from atguigu.domain.messages import UserMessage
 from atguigu.domain.state import DialogueState
 from atguigu.history.builder import ChatHistoryBuilder
 from atguigu.infrastructure.llm_client import llm_client
+from atguigu.knowledge.intents import KnowledgeIntent
 from atguigu.plan.turn_plan import TurnPlan
 from atguigu.prompts.loader import load_prompt_template
 from atguigu.task.flow.flows import FlowsList
@@ -19,16 +20,17 @@ class TurnPlanner:
     对话轮次规划器
     """
 
-    async def predict(self, user_message: UserMessage, state: DialogueState, flow_list: FlowsList) -> TurnPlan:
+    async def predict(self, user_message: UserMessage, state: DialogueState, flow_list: FlowsList, intents: dict[str, KnowledgeIntent]) -> TurnPlan:
         # 1. 构建提示词模版要的内容（不需要构建提示词模版）
-        prompt_inputs: dict[str, Any] = self._prepare_prompt_inputs(user_message, state, flow_list)
+        prompt_inputs: dict[str, Any] = self._prepare_prompt_inputs(user_message, state, flow_list,intents)
 
         # 2. 调用大语言模型
         turn_plan = await self._predict_from_prompt_inputs(prompt_inputs)
 
         return turn_plan
 
-    def _prepare_prompt_inputs(self, user_message: UserMessage, state: DialogueState, flow_list: FlowsList) -> dict[
+    def _prepare_prompt_inputs(self, user_message: UserMessage, state: DialogueState, flow_list: FlowsList
+                               , intents: dict[str, KnowledgeIntent]) -> dict[
         str, Any]:
         """"
         构建提示词填充字段
@@ -56,6 +58,12 @@ class TurnPlanner:
             ]
         }, ensure_ascii=False)
 
+        # 知识意图
+        knowledge_intents_json = json.dumps(
+            [{"id": intent.id, "description": intent.description} for intent in intents.values()],
+            ensure_ascii=False
+        )
+
         return {
             "user_message": user_message,
             "current_conversation": current_conversation,
@@ -66,7 +74,7 @@ class TurnPlanner:
             "active_task_json": active_task_json,
 
             "available_flows_json": available_flows_json,
-            "knowledge_intents_json": ""
+            "knowledge_intents_json": knowledge_intents_json
 
         }
 

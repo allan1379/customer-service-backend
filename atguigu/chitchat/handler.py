@@ -1,2 +1,3 @@
 class ChitChatHandler:
-    pass
+    async def hand(self, state):
+        pass

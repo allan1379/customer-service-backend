@@ -1,8 +1,11 @@
 from pathlib import Path
 
 from atguigu.chitchat.handler import ChitChatHandler
+from atguigu.clarify.responder import ClarifyResponser
 from atguigu.engine.dialogue_engine import DialogueEngine
+from atguigu.knowledge.intents import KNOWLEDGE_INTENTS
 from atguigu.plan.planner import TurnPlanner
+from atguigu.plan.validator import TurnPlanValidator
 from atguigu.task.flow.flows import FlowsList
 from atguigu.task.handler import TaskHandler
 from atguigu.knowledge.handler import KnowledgeHandler
@@ -17,6 +20,8 @@ def build_dialogue_engine() -> DialogueEngine:
     return DialogueEngine(
         planner=TurnPlanner(),
         task_handler=TaskHandler(flow_list=flow_list),
-        knowledge_handler=KnowledgeHandler(),
-        chitchat_handler=ChitChatHandler()
+        knowledge_handler=KnowledgeHandler(intents=KNOWLEDGE_INTENTS),
+        chitchat_handler=ChitChatHandler(),
+        turn_plan_validator=TurnPlanValidator(),
+        clarify_responder=ClarifyResponser()
     )
