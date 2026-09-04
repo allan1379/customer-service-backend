@@ -99,7 +99,7 @@ class DialogueEngine:
         # 1.调用进行意图识别
         turn_plan: TurnPlan = await self.planner.predict(user_message, state, flow_list, intents)
         # 2.利用校验器校验
-        validate_result: TurnPlanValidateResult = self.turn_plan_validator.validate(turn_plan, state, flow_list)
+        validate_result: TurnPlanValidateResult = self.turn_plan_validator.validate(turn_plan, state, flow_list,intents)
         # 3. 判断校验结果
         if not validate_result.valid:
            # 做失败澄清逻辑

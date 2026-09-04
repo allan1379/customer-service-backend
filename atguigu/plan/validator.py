@@ -1,4 +1,5 @@
 from atguigu.domain.state import DialogueState
+from atguigu.knowledge.intents import KnowledgeIntent
 from atguigu.plan.turn_plan import TurnPlanValidateResult, TurnPlan, ClarifyReason
 from atguigu.task.command.commands import StartFlowCommand, SetSlotsCommand, CancelFlowCommand, ResumeFlowCommand
 from atguigu.task.flow.flows import FlowsList
@@ -10,7 +11,7 @@ class TurnPlanValidator:
     """
     pass
 
-    def validate(self, turn_plan: TurnPlan, state: DialogueState, flow_list: FlowsList) -> TurnPlanValidateResult:
+    def validate(self, turn_plan: TurnPlan, state: DialogueState, flow_list: FlowsList,intents: dict[str, KnowledgeIntent]) -> TurnPlanValidateResult:
         """
         分为两大校验类型
         校验外层轨道数【一条轨道没命中、命中了多条轨道】
@@ -35,7 +36,7 @@ class TurnPlanValidator:
             return self._validate_task_track(turn_plan, flow_list)
         # 4.2 校验知识检索轨道
         if selected_track == "knowledge":
-            return self._validate_knowledge_track(turn_plan, state)
+            return self._validate_knowledge_track(turn_plan, state,intents)
         # 4.3 闲聊轨道(真实公司中不允许闲聊)
         return TurnPlanValidateResult(valid=True)  # 代表闲聊或者校验通过
 
@@ -75,5 +76,30 @@ class TurnPlanValidator:
 
         return TurnPlanValidateResult(valid=True)
 
-    def _validate_knowledge_track(self, turn_plan: TurnPlan, state: DialogueState) -> TurnPlanValidateResult:
-        pass
+    def _validate_knowledge_track(self,
+                                  turn_plan: TurnPlan,
+                                  state: DialogueState,
+                                  intents: dict[str, KnowledgeIntent]):
+
+        """
+        校验规则：LLM输出的知识意图intents:["product_info","order_info"]是否是知识意图表中的(商品信息查询或者订单信息查询。)
+        :param state:
+        :param intents:
+        :return:
+        """
+
+        knowledge_plan = turn_plan.knowledge
+
+        if not knowledge_plan.intents:
+            return self.reject(ClarifyReason.MISSING_KNOWLEDGE_INTENT)
+
+        focused_object = state.focused_object
+        for intent in knowledge_plan.intents:
+            intent_meta = intents[intent]
+            required_object = intent_meta.requires_object
+            if required_object is not None:
+                # 判定需要卡片信息才能进行
+                if focused_object is None or focused_object.type != required_object:
+                    return self.reject(ClarifyReason.MISSING_FOCUSED_OBJECT)
+
+        return TurnPlanValidateResult(valid=True)
