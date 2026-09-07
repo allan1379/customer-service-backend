@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from atguigu.task.flow.steps import FlowStep
+from atguigu.task.flow.steps import FlowStep, StartFlowStep
 
 
 @dataclass(slots=True)
@@ -13,6 +13,15 @@ class Flow:
     description: str  # (不分业务、系统)流程描述（非常重要，给大语言模型【工具信息以及工具描述给LLM,目的让大语言模型根据任务选择处理任务的工具】，未来把所有的业务流程给LLM,然后让LLM根据任务 来选择到底要开启哪个业务流程）
     steps: list[FlowStep] = field(default_factory=list)
     slots: dict[str, FlowSlot] = field(default_factory=dict)  # 将业务流程用到的槽位封装到Flow
+
+    def get_start_step(self) -> StartFlowStep | None:
+        """"
+        获取流程开始的步骤
+        """
+        for step in self.steps:
+            if isinstance(step, StartFlowStep):
+                return step
+        return None
 
 
 @dataclass(slots=True)
