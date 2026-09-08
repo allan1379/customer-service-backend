@@ -15,8 +15,6 @@ class CommandProcessor:
         ResumedFlowCommand: 我想继续开始订单状态查询 -----  {"command": "resume_flow"}  {"command": "resume_flow", "flow": "flow_id"}
         CancelFlowCommand: 我不想开始订单状态查询-----{"command":"cancel_flow"}
         SetSlotsCommand: 我的订单号是A10001-----{"command":"set_slots","slots":{"slot_name":""}}
-
-
     """
 
     def run(self, state: DialogueState, flow_list: FlowsList, commands: list[Command]):
@@ -133,4 +131,67 @@ class CommandProcessor:
                 started_flow_name=start_flow.flow_name
             ))
 
-        pass
+    def _process_resume_flow(self,
+                             command: ResumeFlowCommand,
+                             state: DialogueState,
+                             flow_list: FlowsList):
+        """
+        职责： 恢复中断的业务流程(指定的业务流程和最近的业务流程)
+        场景：我准备继续执行订单状态查询-----{"command":"resumed_tas",flow="order_status"}  --- ResumedFlowCommand的flow值order_status
+        场景：我继续回到上一次-----{"command":"resumed_tas"}--- ResumedFlowCommand的flow值order_status的值None:----从栈顶获取最近中断的业务流程
+        :param command:
+        :param state:
+        :param flow_list:
+        :return:
+        """
+
+        # 1. 获取要恢复的业务流程的流程ID
+        resumed_flow_id = command.flow
+
+        # 2. 如果resumed_flow_id是None 且栈中没有任何元素(流程)
+        if resumed_flow_id is None and not state.interrupted_active_tasks:
+            return
+
+        # 3. resumed_flow_id 不为空或者resumed_flow_id为空但是栈中有元素（流程）
+        # 3.1 获取当前正在执行的业务流程
+        active_task = state.active_task
+        # 3.1 当前是存在正在执行的流程
+        if active_task is not None:
+            # a) 要恢复的业务流程流程ID (先获取指定的业务流程ID 如果不存在获取栈顶的流程)
+            resumed_flow_id = resumed_flow_id or state.interrupted_active_tasks[-1].flow_id
+
+            # b) 当前正在执行的业务流程ID等于要恢复的业务流程ID
+            if active_task.flow_id == resumed_flow_id:
+                return  # 不需要恢复(恢复系统流程的开场白都不用提示)
+
+            # c)  当前正在执行的业务流程ID不等于要恢复的业务流程ID
+            interrupted_flow_id = active_task.flow_id
+            interrupted_flow_name = flow_list.get_flow_by_id(interrupted_flow_id).flow_name
+            state.interrupted_activating_task()  # 中断正在执行的业务流程
+            if not state.resumed_interrupted_business_task(flow_id=resumed_flow_id):
+                state.resumed_interrupted_business_task()  # 中断暂存里面没有需要回复的业务流程， 回复之前被中断的正在执行的业务流程
+
+                return
+
+            # d ) 激活中断的系统流程
+            interrupted_system_flow = flow_list.get_flow_by_id("system_task_interrupted")
+            state.start_active_system_task(InterruptedSystemContext(
+                system_flow_id="system_task_interrupted",
+                system_step_id=interrupted_system_flow.get_start_step().id,
+                interrupted_flow_id=interrupted_flow_id,
+                interrupted_flow_name=interrupted_flow_name,
+                started_flow_id=resumed_flow_id,
+                started_flow_name=flow_list.get_flow_by_id(resumed_flow_id).flow_name
+            ))
+        else:
+            if not state.resumed_interrupted_business_task(flow_id=resumed_flow_id):
+                return
+            # 激活恢复系统流程
+            resumed_system_flow = flow_list.get_flow_by_id("system_task_resumed")
+            resumed_task = state.active_task
+            state.start_active_system_task(ResumedSystemContext(
+                system_flow_id="system_task_resumed",
+                system_step_id=resumed_system_flow.get_start_step().id,
+                resumed_flow_id=resumed_task.flow_id,  # 恢复业务流程的流程ID
+                resumed_flow_name=flow_list.get_flow_by_id(resumed_task.flow_id).flow_name  # 恢复业务流程的流程名字
+            ))
