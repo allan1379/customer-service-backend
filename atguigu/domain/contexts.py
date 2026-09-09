@@ -36,8 +36,8 @@ class SystemContext:
     """
     系统流程的模版
     """
-    system_flow_id: str  # 系统流程ID
-    system_step_id: str  # 步骤ID
+    flow_id: str  # 系统流程ID
+    step_id: str  # 步骤ID
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)  # 这个方法可以自动转换方法到dict
@@ -98,6 +98,12 @@ class InformationSystemContext(SystemContext):
     """
     response: dict[str, Any]  # 填槽的数据
     sorts_name: str  # 槽位名称
+
+
+@dataclass(slots=True)
+class CollectedSystemContext(SystemContext):
+    response: dict[str, Any]  # {"text": "请告诉我你的订单号。"}
+    slot_name: str  # 槽位名字 "order_number"
 
 
 SYSTEM_CONTEXT_TO_CLASS: dict[str, Any] = {

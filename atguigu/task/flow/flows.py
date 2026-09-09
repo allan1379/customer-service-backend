@@ -23,6 +23,16 @@ class Flow:
                 return step
         return None
 
+    def get_step_by_id(self, step_id: str) -> FlowStep | None:
+        """"
+        根据步骤ID获取步骤对象
+        """
+        for step in self.steps:
+            if step.id == step_id:
+                return step
+
+        return None
+
 
 @dataclass(slots=True)
 class FlowSlot:

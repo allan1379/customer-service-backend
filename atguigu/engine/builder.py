@@ -6,6 +6,7 @@ from atguigu.engine.dialogue_engine import DialogueEngine
 from atguigu.knowledge.intents import KNOWLEDGE_INTENTS
 from atguigu.plan.planner import TurnPlanner
 from atguigu.plan.validator import TurnPlanValidator
+from atguigu.task.action.builder import build_action_runner
 from atguigu.task.command.processor import CommandProcessor
 from atguigu.task.flow.executor import FlowExecutor
 from atguigu.task.flow.flows import FlowsList
@@ -23,7 +24,8 @@ def build_dialogue_engine() -> DialogueEngine:
         planner=TurnPlanner(),
         task_handler=TaskHandler(flow_list=flow_list,
                                  command_processor=CommandProcessor(),
-                                 executor=FlowExecutor()),
+                                 executor=FlowExecutor(),
+                                 action_runner=build_action_runner()),
         knowledge_handler=KnowledgeHandler(intents=KNOWLEDGE_INTENTS),
         chitchat_handler=ChitChatHandler(),
         turn_plan_validator=TurnPlanValidator(),

@@ -31,8 +31,6 @@ class CommandProcessor:
             else:
                 pass
 
-        pass
-
     def _process_set_slots(self, command: SetSlotsCommand, state: DialogueState):
         """
                 职责： 将command的slots获取出来，设置到当期业务流程上下文的slots属性
@@ -57,15 +55,17 @@ class CommandProcessor:
         # 2. 获取当前正在执行的业务流程(流程ID以及流程名字)
         canceled_flow_id = state.active_task.flow_id
         canceled_flow_name = flow_list.get_flow_by_id(state.active_task.flow_id).flow_name
-        # 3. 激活取消系统流程
+
+        # 3. 清空所有流程(业务流程、系统流程都清空)
+        state.end_activating_task()
+
+        # 4. 激活取消系统流程
         state.start_active_system_task(CanceledSystemContext(
-            system_flow_id="system_task_canceled",
-            system_step_id=start_step_id,
+            flow_id="system_task_canceled",
+            step_id=start_step_id,
             canceled_flow_id=canceled_flow_id,
             canceled_flow_name=canceled_flow_name
         ))
-        # 4. 清空所有流程(业务流程、系统流程都清空)
-        state.end_activating_task()
 
     def _process_start_flow(self, command: StartFlowCommand, state: DialogueState, flow_list: FlowsList):
         """"
@@ -98,8 +98,8 @@ class CommandProcessor:
             interrupted_flow_id = active_task.flow_id
             interrupted_flow_name = flow_list.get_flow_by_id(interrupted_flow_id).flow_name
             state.start_active_system_task(InterruptedSystemContext(
-                system_flow_id="system_task_interrupted",
-                system_step_id=interrupted_system_flow.get_start_step().id,
+                flow_id="system_task_interrupted",
+                step_id=interrupted_system_flow.get_start_step().id,
                 interrupted_flow_id=interrupted_flow_id,
                 interrupted_flow_name=interrupted_flow_name,
                 started_flow_id=start_flow_id,
@@ -110,8 +110,8 @@ class CommandProcessor:
             if state.resumed_interrupted_business_task(flow_id=start_flow_id):
                 resumed_system_flow = flow_list.get_flow_by_id("system_task_resumed")
                 state.start_active_system_task(ResumedSystemContext(
-                    system_flow_id=resumed_system_flow.flow_id,
-                    system_step_id=resumed_system_flow.get_start_step().id,
+                    flow_id=resumed_system_flow.flow_id,
+                    step_id=resumed_system_flow.get_start_step().id,
                     resumed_flow_id=start_flow_id,
                     resumed_flow_name=flow_list.get_flow_by_id(state.active_task.flow_id).flow_name
                 ))
@@ -125,8 +125,8 @@ class CommandProcessor:
             # 2. 激活开始系统流程
             start_system_flow = flow_list.get_flow_by_id("system_task_started")
             state.start_active_system_task(StartedSystemContext(
-                system_flow_id="system_task_started",
-                system_step_id=start_system_flow.flow_id,
+                flow_id="system_task_started",
+                step_id=start_system_flow.flow_id,
                 started_flow_id=start_flow_id,
                 started_flow_name=start_flow.flow_name
             ))
@@ -176,8 +176,8 @@ class CommandProcessor:
             # d ) 激活中断的系统流程
             interrupted_system_flow = flow_list.get_flow_by_id("system_task_interrupted")
             state.start_active_system_task(InterruptedSystemContext(
-                system_flow_id="system_task_interrupted",
-                system_step_id=interrupted_system_flow.get_start_step().id,
+                flow_id="system_task_interrupted",
+                step_id=interrupted_system_flow.get_start_step().id,
                 interrupted_flow_id=interrupted_flow_id,
                 interrupted_flow_name=interrupted_flow_name,
                 started_flow_id=resumed_flow_id,
@@ -190,8 +190,8 @@ class CommandProcessor:
             resumed_system_flow = flow_list.get_flow_by_id("system_task_resumed")
             resumed_task = state.active_task
             state.start_active_system_task(ResumedSystemContext(
-                system_flow_id="system_task_resumed",
-                system_step_id=resumed_system_flow.get_start_step().id,
+                flow_id="system_task_resumed",
+                step_id=resumed_system_flow.get_start_step().id,
                 resumed_flow_id=resumed_task.flow_id,  # 恢复业务流程的流程ID
                 resumed_flow_name=flow_list.get_flow_by_id(resumed_task.flow_id).flow_name  # 恢复业务流程的流程名字
             ))
