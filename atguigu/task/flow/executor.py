@@ -1,5 +1,6 @@
 from dataclasses import asdict
 
+from atguigu.domain.contexts import CollectedSystemContext
 from atguigu.domain.messages import BotMessage
 from atguigu.domain.state import DialogueState
 from atguigu.task.action.base import ActionCall, ActionResult
@@ -188,3 +189,58 @@ class FlowExecutor:
             # context.response    #    text: "请告诉我你的订单号。"
             action_kwargs = asdict(state.active_system_task)[action_kwargs.split(".")[1]]
         return ActionCall(action_name=action_name, action_kwargs=action_kwargs)
+
+    def _run_collect_step(self,
+                          state: DialogueState,
+                          step: CollectFlowStep,
+                          flow_list: FlowsList):
+        """
+        注意：进入两次:第一次做完一定要返回None(内部循环推荐下一步step 才能继续) 且不能更新step_id（执行下一步去了）
+        1. 第一次触发：system_collect_information系统流程进行槽位收集
+        2. 第二次触发：对填写槽位的校验(用户主动填写，填写的不合法...)
+        :param state:
+        :param step:
+        :param flow_list:
+        :return:
+        """
+        self._try_to_fill_slot_from_focused_object(state, step)
+        if state.active_task.slots.get(step.slot_name):
+            # 第二次触发(槽位信息填写过：LLM/点击卡片)
+            if step.validate:
+                # 校验通过
+                if self._eval_condition(state, step.validate.condition):
+                    self._advance_flow_step(state, step)
+                    return None
+                # 校验失败 重新在填写一遍【重新触发了收集信息的系统流程】错误的信息
+                else:
+                    state.remove_slot(step.slot_name)  # 移除掉填错的槽位信息
+                    if step.validate.failure_response:
+                        return ActionCall(action_name="action_response",
+                                          action_kwargs=asdict(step.validate.failure_response))
+                    else:
+                        return ActionCall(action_name="action_response",
+                                          action_kwargs={"text": "你填写的信息的有误，请您重新输入!"})
+            else:
+                # 推荐下一步
+                self._advance_flow_step(state, step)
+                return None
+        else:
+            # 第一次触发(激活收集信息的系统流程 等用户填写槽位信息)
+            state.start_active_system_task(CollectedSystemContext(
+                flow_id="system_collect_information",
+                step_id=flow_list.get_flow_by_id("system_collect_information").get_start_step().id,
+                response=asdict(step.response),
+                slot_name=step.slot_name
+            ))
+            return None
+
+    def _try_to_fill_slot_from_focused_object(self, state: DialogueState, step: CollectFlowStep):
+        """"
+        从卡片中获取填槽的数据
+        """
+        if state.focused_object is None:
+            return
+        if step.slot_name == 'order_number' and state.focused_object.type == "order":
+            state.set_slots({step.slot_name: state.focused_object.id})
+        if step.slot_name == "product_id" and state.focused_object.type == "product":
+            state.set_slots({step.slot_name: state.focused_object.id})

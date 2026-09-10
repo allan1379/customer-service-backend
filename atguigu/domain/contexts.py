@@ -49,7 +49,7 @@ class SystemContext:
         :param data:
         :return:
         """
-        clz = SYSTEM_CONTEXT_TO_CLASS[data.get("system_flow_id")]  # 通过dict里面的流程名称获取到类对象
+        clz = SYSTEM_CONTEXT_TO_CLASS[data.get("flow_id")]  # 通过dict里面的流程名称获取到类对象
         return clz(**data)  # 做了一个解包
 
 
