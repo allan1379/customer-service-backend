@@ -1,5 +1,6 @@
 from typing import Any
 
+from atguigu.domain.messages import BotMessage
 from atguigu.domain.state import DialogueState
 from atguigu.task.action.base import Action, ActionResult
 
@@ -15,7 +16,7 @@ class LookupLogisticsAction(Action):
         :param action_args:
         :return:
         """
-        pass
+        return ActionResult(messages=[BotMessage(text="状态不错")])
 
 
 
