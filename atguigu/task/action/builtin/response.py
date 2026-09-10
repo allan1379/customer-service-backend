@@ -18,4 +18,4 @@ class ActionResponse(Action):
         :return:
         """
         text = action_args.get("text")
-        return ActionResult(messages=[BotMessage(text="text")])
+        return ActionResult(messages=[BotMessage(text=text)])

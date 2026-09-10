@@ -56,7 +56,7 @@ class DialogueEngine:
         state.commit_pending_turn()
 
         return ProcessResult(sender_id="u1001", message_id=str(uuid.uuid4()),
-                             messages=[BotMessage(text="我是机器人AI")])
+                             messages=bot_msg)
 
     def _prepare_session(self, state: DialogueState):
         """"

@@ -126,7 +126,7 @@ class CommandProcessor:
             start_system_flow = flow_list.get_flow_by_id("system_task_started")
             state.start_active_system_task(StartedSystemContext(
                 flow_id="system_task_started",
-                step_id=start_system_flow.flow_id,
+                step_id=start_system_flow.get_start_step().id,
                 started_flow_id=start_flow_id,
                 started_flow_name=start_flow.flow_name
             ))

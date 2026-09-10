@@ -108,8 +108,8 @@ class CollectedSystemContext(SystemContext):
 
 SYSTEM_CONTEXT_TO_CLASS: dict[str, Any] = {
     "system_task_started": StartedSystemContext,
-    "system_task_canceled": CanceledSystemContext,
     "system_task_resumed": ResumedSystemContext,
+    "system_collect_information": CollectedSystemContext,
     "system_task_interrupted": InterruptedSystemContext,
-    "system_collect_information": InformationSystemContext
+    "system_task_canceled": CanceledSystemContext
 }

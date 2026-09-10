@@ -57,19 +57,19 @@ class UserMessage:
         return {
             'sender_id': self.sender_id,
             'message_id': self.message_id,
-            'type': MessageType(self.type),
+            "type": self.type.value,
             'text': self.text,
             'object': self.object.to_dict() if self.object else None
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'UserMessage':
+    def from_dict(cls, data: dict[str, Any]) -> "UserMessage":
         return cls(
             sender_id=data['sender_id'],
             message_id=data['message_id'],
             type=MessageType(data['type']),
-            text=data['text'],
-            object=FocusedObject(data['object']) if data['object'] else None
+            text=data.get('text'),
+            object=FocusedObject.from_dict(data['object']) if data.get('object') else None
         )
 
 
