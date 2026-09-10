@@ -38,7 +38,7 @@ class FocusedObject:
 
 
 class MessageType(Enum):
-    TEXT = "text",
+    TEXT = "text"
     OBJECT = "object"
 
 
